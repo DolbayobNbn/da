@@ -15,7 +15,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y wget curl unzip python3
           
-          # Install RustDesk dependencies
+          # Install RustDesk dependencies (updated for Ubuntu 24.04)
           sudo apt-get install -y \
             libxdo3 \
             libxcb-shape0 \
@@ -26,7 +26,7 @@ jobs:
             gstreamer1.0-pipewire \
             libgtk-3-0 \
             libxss1 \
-            libasound2 \
+            libasound2t64 \
             libxtst6 \
             xdotool
           
