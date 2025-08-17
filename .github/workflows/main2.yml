@@ -50,20 +50,27 @@ jobs:
           sleep 3
           
           # Start desktop environment
-          xfce4-session &
-          sleep 5
+          DISPLAY=:1 xfce4-session &
+          sleep 10
           
       - name: Configure RustDesk
         run: |
+          # Set display for all RustDesk commands
+          export DISPLAY=:1
+          
           # Create rustdesk config directory
           mkdir -p ~/.config/rustdesk
           
-          # Start RustDesk service
-          rustdesk --service &
+          # Start RustDesk service first
+          sudo rustdesk --service &
+          sleep 5
+          
+          # Start RustDesk GUI to initialize properly
+          DISPLAY=:1 rustdesk &
           sleep 10
           
-          # Start RustDesk GUI (if needed)
-          rustdesk &
+          # Try to ensure RustDesk connects to servers
+          rustdesk --connect-server || echo "Server connection attempt made"
           sleep 5
           
       - name: Display Connection Info
@@ -71,33 +78,39 @@ jobs:
           echo "=== RustDesk Connection Information ==="
           echo "Runner IP: $(curl -s ifconfig.me)"
           
-          # Wait a bit for RustDesk to fully initialize
-          sleep 5
+          # Wait longer for RustDesk to fully initialize and connect to servers
+          echo "Waiting for RustDesk to connect to servers..."
+          sleep 15
           
-          # Get RustDesk ID
-          RUSTDESK_ID=$(rustdesk --get-id 2>/dev/null || echo "ID not available yet")
-          echo "RustDesk ID: $RUSTDESK_ID"
+          # Try multiple attempts to get ID
+          for i in {1..5}; do
+            echo "Attempt $i to get RustDesk ID..."
+            RUSTDESK_ID=$(rustdesk --get-id 2>/dev/null || echo "")
+            if [ ! -z "$RUSTDESK_ID" ] && [ "$RUSTDESK_ID" != "ID not available yet" ]; then
+              echo "RustDesk ID: $RUSTDESK_ID"
+              break
+            fi
+            sleep 10
+          done
           
-          # Get or set RustDesk password
-          RUSTDESK_PASSWORD=$(rustdesk --password 2>/dev/null || echo "")
-          if [ -z "$RUSTDESK_PASSWORD" ]; then
-            # Set a temporary password if none exists
-            TEMP_PASSWORD="TempPass123"
-            rustdesk --password "$TEMP_PASSWORD" 2>/dev/null
-            echo "RustDesk Password: $TEMP_PASSWORD (temporary password set)"
-          else
-            echo "RustDesk Password: $RUSTDESK_PASSWORD"
+          # Check if we got a valid ID
+          if [ -z "$RUSTDESK_ID" ] || [ "$RUSTDESK_ID" == "ID not available yet" ]; then
+            echo "RustDesk ID: Not yet registered with servers"
+            echo "This may take a few more minutes to activate online..."
           fi
           
-          # Alternative: check config files for ID
-          if [ -f ~/.config/rustdesk/RustDesk.toml ]; then
-            echo "--- Config file contents ---"
-            cat ~/.config/rustdesk/RustDesk.toml | grep -E "(id|password)" || echo "No ID/password found in config"
-          fi
+          # Set password
+          TEMP_PASSWORD="TempPass123"
+          rustdesk --password "$TEMP_PASSWORD" 2>/dev/null
+          echo "RustDesk Password: $TEMP_PASSWORD"
           
-          # Alternative: try to get ID from rustdesk status
-          echo "--- RustDesk Status ---"
-          rustdesk --status 2>/dev/null || echo "Status command not available"
+          # Show process status
+          echo "--- RustDesk Processes ---"
+          ps aux | grep rustdesk || echo "No RustDesk processes found"
+          
+          # Show network connections
+          echo "--- Network Status ---"
+          netstat -tlnp 2>/dev/null | grep rustdesk || echo "No RustDesk network connections"
           
           echo "========================================="
           
