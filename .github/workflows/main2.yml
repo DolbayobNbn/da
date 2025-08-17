@@ -70,7 +70,35 @@ jobs:
         run: |
           echo "=== RustDesk Connection Information ==="
           echo "Runner IP: $(curl -s ifconfig.me)"
-          echo "Check RustDesk ID and password in the application"
+          
+          # Wait a bit for RustDesk to fully initialize
+          sleep 5
+          
+          # Get RustDesk ID
+          RUSTDESK_ID=$(rustdesk --get-id 2>/dev/null || echo "ID not available yet")
+          echo "RustDesk ID: $RUSTDESK_ID"
+          
+          # Get or set RustDesk password
+          RUSTDESK_PASSWORD=$(rustdesk --password 2>/dev/null || echo "")
+          if [ -z "$RUSTDESK_PASSWORD" ]; then
+            # Set a temporary password if none exists
+            TEMP_PASSWORD="TempPass123"
+            rustdesk --password "$TEMP_PASSWORD" 2>/dev/null
+            echo "RustDesk Password: $TEMP_PASSWORD (temporary password set)"
+          else
+            echo "RustDesk Password: $RUSTDESK_PASSWORD"
+          fi
+          
+          # Alternative: check config files for ID
+          if [ -f ~/.config/rustdesk/RustDesk.toml ]; then
+            echo "--- Config file contents ---"
+            cat ~/.config/rustdesk/RustDesk.toml | grep -E "(id|password)" || echo "No ID/password found in config"
+          fi
+          
+          # Alternative: try to get ID from rustdesk status
+          echo "--- RustDesk Status ---"
+          rustdesk --status 2>/dev/null || echo "Status command not available"
+          
           echo "========================================="
           
       - name: Keep Alive
