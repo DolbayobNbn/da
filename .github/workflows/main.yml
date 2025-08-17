@@ -18,8 +18,9 @@ jobs:
       - name: Download and Setup RustDesk
         run: |
           # Download RustDesk for Linux
-          wget https://github.com/rustdesk/rustdesk/releases/latest/download/rustdesk-1.2.3-x86_64.AppImage
-          chmod +x rustdesk-1.2.3-x86_64.AppImage
+          wget https://github.com/rustdesk/rustdesk/releases/download/1.4.1/rustdesk-1.4.1-x86_64.deb
+          sudo dpkg -i rustdesk-1.4.1-x86_64.deb
+          sudo apt-get install -f -y  # Fix any dependency issues
           
           # Install desktop environment (lightweight)
           sudo apt-get install -y xfce4 xfce4-goodies
@@ -43,9 +44,13 @@ jobs:
           # Create rustdesk config directory
           mkdir -p ~/.config/rustdesk
           
-          # Start RustDesk (this would typically require GUI interaction)
-          ./rustdesk-1.2.3-x86_64.AppImage --service &
+          # Start RustDesk service
+          rustdesk --service &
           sleep 10
+          
+          # Start RustDesk GUI (if needed)
+          rustdesk &
+          sleep 5
           
       - name: Display Connection Info
         run: |
