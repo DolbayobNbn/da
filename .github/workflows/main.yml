@@ -1,0 +1,74 @@
+name: Linux - RustDesk
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Start Building...
+    runs-on: ubuntu-latest
+    timeout-minutes: 9999
+    
+    steps:
+      - name: Installing Essentials
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget curl unzip python3
+          
+      - name: Download and Setup RustDesk
+        run: |
+          # Download RustDesk for Linux
+          wget https://github.com/rustdesk/rustdesk/releases/latest/download/rustdesk-1.2.3-x86_64.AppImage
+          chmod +x rustdesk-1.2.3-x86_64.AppImage
+          
+          # Install desktop environment (lightweight)
+          sudo apt-get install -y xfce4 xfce4-goodies
+          
+          # Install VNC server as backup
+          sudo apt-get install -y tightvncserver
+          
+      - name: Setup Display and Desktop
+        run: |
+          # Start virtual display
+          export DISPLAY=:1
+          Xvfb :1 -screen 0 1024x768x24 &
+          sleep 3
+          
+          # Start desktop environment
+          xfce4-session &
+          sleep 5
+          
+      - name: Configure RustDesk
+        run: |
+          # Create rustdesk config directory
+          mkdir -p ~/.config/rustdesk
+          
+          # Start RustDesk (this would typically require GUI interaction)
+          ./rustdesk-1.2.3-x86_64.AppImage --service &
+          sleep 10
+          
+      - name: Display Connection Info
+        run: |
+          echo "=== RustDesk Connection Information ==="
+          echo "Runner IP: $(curl -s ifconfig.me)"
+          echo "Check RustDesk ID and password in the application"
+          echo "========================================="
+          
+      - name: Keep Alive
+        run: |
+          # Create a Python script to keep the session alive
+          cat > keep_alive.py << 'EOF'
+          import time
+          import subprocess
+          
+          print("Keeping session alive...")
+          print("Connect via RustDesk using the ID shown above")
+          
+          counter = 0
+          while True:
+              counter += 1
+              print(f"Alive for {counter} minutes")
+              time.sleep(60)
+          EOF
+          
+          python3 keep_alive.py
