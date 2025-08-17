@@ -1,0 +1,93 @@
+name: Linux - RustDesk
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Start Building...
+    runs-on: ubuntu-latest
+    timeout-minutes: 9999
+    
+    steps:
+      - name: Installing Essentials and Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget curl unzip python3
+          
+          # Install RustDesk dependencies
+          sudo apt-get install -y \
+            libxdo3 \
+            libxcb-shape0 \
+            libva2 \
+            libva-drm2 \
+            libva-x11-2 \
+            libgstreamer-plugins-base1.0-0 \
+            gstreamer1.0-pipewire \
+            libgtk-3-0 \
+            libxss1 \
+            libasound2 \
+            libxtst6 \
+            xdotool
+          
+          # Install desktop environment (lightweight)
+          sudo apt-get install -y xfce4 xfce4-goodies
+          
+          # Install VNC server as backup
+          sudo apt-get install -y tightvncserver
+          
+      - name: Download and Setup RustDesk
+        run: |
+          # Download RustDesk for Linux
+          wget https://github.com/rustdesk/rustdesk/releases/download/1.4.1/rustdesk-1.4.1-x86_64.deb
+          sudo dpkg -i rustdesk-1.4.1-x86_64.deb
+          
+      - name: Setup Display and Desktop
+        run: |
+          # Start virtual display
+          export DISPLAY=:1
+          Xvfb :1 -screen 0 1024x768x24 &
+          sleep 3
+          
+          # Start desktop environment
+          xfce4-session &
+          sleep 5
+          
+      - name: Configure RustDesk
+        run: |
+          # Create rustdesk config directory
+          mkdir -p ~/.config/rustdesk
+          
+          # Start RustDesk service
+          rustdesk --service &
+          sleep 10
+          
+          # Start RustDesk GUI (if needed)
+          rustdesk &
+          sleep 5
+          
+      - name: Display Connection Info
+        run: |
+          echo "=== RustDesk Connection Information ==="
+          echo "Runner IP: $(curl -s ifconfig.me)"
+          echo "Check RustDesk ID and password in the application"
+          echo "========================================="
+          
+      - name: Keep Alive
+        run: |
+          # Create a Python script to keep the session alive
+          cat > keep_alive.py << 'EOF'
+          import time
+          import subprocess
+          
+          print("Keeping session alive...")
+          print("Connect via RustDesk using the ID shown above")
+          
+          counter = 0
+          while True:
+              counter += 1
+              print(f"Alive for {counter} minutes")
+              time.sleep(60)
+          EOF
+          
+          python3 keep_alive.py
